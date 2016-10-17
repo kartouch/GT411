@@ -15,9 +15,10 @@ VERSION:
    0.0.1
 
 COMMANDS:
-     top, t     Display top downloads per day/week/month/100
-     search, s  Search for torrents
-     help, h    Shows a list of commands or help for one command
+     top, t       Display top downloads per day/week/month/100
+     search, s    Search for torrents
+     download, d  Download ID
+     help, h      Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
    --help, -h     show help

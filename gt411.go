@@ -10,7 +10,8 @@ import (
   "github.com/urfave/cli"
   "strconv"
   "text/tabwriter"
-  "strings"
+  "io"
+  "bytes"
 
 )
 
@@ -19,6 +20,7 @@ type Credentials struct {Token string}
 type Configuration struct {
   Username   string
   Password   string
+  BaseUrl    string
 }
 
 type Torrent struct{
@@ -30,7 +32,6 @@ type Torrent struct{
 
 //constants
 
-const baseUrl = "https://api.t411.ch"
 const padding = 2
 
 func main() {
@@ -53,7 +54,7 @@ func main() {
       Action:  func(c *cli.Context) error {
         switch c.Args().First(){
         case "today","month","week","100":
-          t := torrents("/torrents/top/"+c.Args().First(),auth().Token)
+          t := torrents("top",c.Args().First(),auth().Token)
           if c.String("c") != "null"{
             printTable(sortedOnCategory(category()[c.String("c")],t))
           }else{
@@ -87,9 +88,18 @@ func main() {
       if c.String("c") != "null"{ arr = append(arr,"cid="+category()[c.String("c")]) }
       if c.String("l") != "null"{ arr = append(arr,"limit="+c.String("l")) }
       for _,v := range arr { query = query + "&" +v }
-      t := torrents("/torrents/search/"+c.Args().First()+query,auth().Token)
+      t := torrents("search",c.Args().First()+query,auth().Token)
       fmt.Println(t)
       //printTable(t)
+      return nil
+      },
+    },
+    {
+    Name: "download",
+    Aliases: []string{"d"},
+    Usage:  "Download ID",
+    Action:  func(c *cli.Context) error {
+      torrents("download",c.Args().First(),auth().Token)
       return nil
       },
     },
@@ -109,7 +119,7 @@ func config() (c *Configuration) {
 
 func auth() (c *Credentials) {
   configuration := config()
-  resp, err := http.PostForm(baseUrl + "/auth", url.Values{"username": {configuration.Username}, "password": {configuration.Password}})
+  resp, err := http.PostForm(configuration.BaseUrl + "/auth", url.Values{"username": {configuration.Username}, "password": {configuration.Password}})
   if err != nil {
 	   fmt.Println(err)
      os.Exit(1)
@@ -123,9 +133,9 @@ func auth() (c *Credentials) {
 	return
 }
 
-func torrents(action,token string) (data []Torrent){
-  //configuration := config()
-  uri := baseUrl + action
+func torrents(action,query,token string) (data []Torrent){
+  configuration := config()
+  uri := configuration.BaseUrl + "/torrents/" + action + "/" +query
   torrents := make([]Torrent, 0)
   client := &http.Client{}
   req, err := http.NewRequest("GET",uri,nil)
@@ -140,12 +150,19 @@ func torrents(action,token string) (data []Torrent){
     os.Exit(1)
   }
 
-  if strings.Contains(action,"/torrents/search"){
-      //TODO
-      fmt.Println(string(body))
-      //os.Exit(1)
-
-  }else{
+  switch action{
+  case "search":
+    fmt.Println(string(body))
+  case "download":
+    b := bytes.NewBufferString(string(body))
+    f, err := os.Create(query + ".torrent")
+    defer f.Close()
+    _, err = io.Copy(f, b)
+    if err != nil  {
+      fmt.Println(err)
+      os.Exit(1)
+    }
+  default:
     jerr := json.Unmarshal(body,&torrents); if jerr != nil {
       fmt.Println(jerr)
       os.Exit(1)
