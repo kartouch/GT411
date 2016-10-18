@@ -15,7 +15,6 @@ import (
 
 )
 
-
 type Credentials struct {Token string}
 type Configuration struct {
   Username   string
@@ -38,8 +37,6 @@ type SearchResult struct{
     Category string
   }
 }
-
-//constants
 
 const padding = 2
 
@@ -164,8 +161,8 @@ func torrents(action,query,token string) (data []Torrent){
     b := bytes.NewBufferString(string(body))
     json.NewDecoder(b).Decode(&sr)
     for _,t := range sr.Torrents{ torrents = append(torrents,t) }
-
   case "download":
+    
     b := bytes.NewBufferString(string(body))
     f, err := os.Create(query + ".torrent")
     defer f.Close()
