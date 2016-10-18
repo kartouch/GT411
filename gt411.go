@@ -30,6 +30,15 @@ type Torrent struct{
   Category string
 }
 
+type SearchResult struct{
+  Torrents []struct{
+    Id string
+    Name string
+    Size string
+    Category string
+  }
+}
+
 //constants
 
 const padding = 2
@@ -89,8 +98,7 @@ func main() {
       if c.String("l") != "null"{ arr = append(arr,"limit="+c.String("l")) }
       for _,v := range arr { query = query + "&" +v }
       t := torrents("search",c.Args().First()+query,auth().Token)
-      fmt.Println(t)
-      //printTable(t)
+      printTable(t)
       return nil
       },
     },
@@ -152,7 +160,11 @@ func torrents(action,query,token string) (data []Torrent){
 
   switch action{
   case "search":
-    fmt.Println(string(body))
+    sr := new(SearchResult)
+    b := bytes.NewBufferString(string(body))
+    json.NewDecoder(b).Decode(&sr)
+    for _,t := range sr.Torrents{ torrents = append(torrents,t) }
+
   case "download":
     b := bytes.NewBufferString(string(body))
     f, err := os.Create(query + ".torrent")
@@ -162,6 +174,7 @@ func torrents(action,query,token string) (data []Torrent){
       fmt.Println(err)
       os.Exit(1)
     }
+
   default:
     jerr := json.Unmarshal(body,&torrents); if jerr != nil {
       fmt.Println(jerr)
